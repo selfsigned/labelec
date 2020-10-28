@@ -11,14 +11,13 @@ CFLAGS ?= -std=c99 -Wall -ffunction-sections
 
 # all : hex flash considered harmful (race condition with -j)
 all:
-	echo $(PORT)
 	$(MAKE) hex
 	$(MAKE) flash
 
 $(NAME).bin: $(SRC)
 	$(CC) $(CFLAGS) -I. -mmcu=$(MCU) -DF_CPU=$(F_CPU) -o $(NAME).bin $(SRC)
 
-$(NAME).hex:
+$(NAME).hex: $(SRC)
 	avr-size $(NAME).bin
 	avr-objcopy -j .text -j .data -O ihex main.bin main.hex
 
