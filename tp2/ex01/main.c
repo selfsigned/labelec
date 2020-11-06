@@ -22,11 +22,8 @@ int main() {
 	//   -> mode 4: WGM12
 	TCCR1B |=  (1 << WGM12);
 
-	// set 16bit timer1 to 0, fig 16.11.4
-	TCNT1 = 0;
-
 	// compare register
-	OCR1A = 62500;
+	OCR1A = (F_CPU / 256) / 2;
 
 	for (;;) {}
 }
