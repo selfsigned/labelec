@@ -1,34 +1,59 @@
 #include <avr/io.h>
 #include <inttypes.h>
 
-// It would be much better to use a timer based interrupt for debouncing
+// http://ww1.microchip.com/downloads/en/DeviceDoc/ATmega48A-PA-88A-PA-168A-PA-328-P-DS-DS40002061B.pdf
+
+#define TIMER1_PRE 256
+
+volatile int8_t mid;
+
 int main() {
 	DDRB |= (1 << PB1);
 
-	// interrupt sense control: rising edge
-	EICRA |= (1 << ISC11) | (1 << ISC10);
+	// clock 0 
+	// clk/1024
+	TCCR0B |= (1 << CS02) | (1 << CS00);
+	
+	// CTC mode
+	TCCR0A |= (1 << WGM01);
 
-	// activate interrupts on INT0
-	EIMSK |= (1 << INT1);
+	//toggle COMP B
+	TCCR0A |= (1 << COM0B0);
 
-	// (optional) standby sleep mode
-	SMCR |= (1 << SM2) | (1 << SM1);
+	// 200HZ
+	OCR0A = 77; // F_CPU / (1024 * 200) - 1;
+	mid = OCR0A / 2;
 
-	// activate interrupts
+	// enable timer0 interrupt
+	TIMSK0 |= (1 << OCIE0B);
+
+	// clock 1
+	// prescaler of clk/256
+	TCCR1B |= (1 << CS12);
+
+	// tab 16-4 to set PWM fast 8
+	TCCR1A |= (1 << WGM11);
+	TCCR1B |= (1 << WGM12) | (1 << WGM13);
+
+	/* // tab 16-2 non-inverting */
+	TCCR1A |= (1 << COM1A1) ;
+
 	__asm__("SEI");
-
-	for (;;){
-		__asm__("SLEEP");
-	};
+	for (;;) {__asm__("SLEEP");}
 }
 
+// TIMER0 COMP_B
+void __vector_15(void) __attribute__ ((signal, used));
+void __vector_15(void) {
+	static uint8_t i = 0;
 
-// Signal to gcc that this is an interrupt,
-//    interrupt attribute re-enables the I flag unlike signal
-//    see: https://gcc.gnu.org/onlinedocs/gcc/AVR-Function-Attributes.html#AVR-Function-Attributes)
-// vector 2 -> INT1
-void __vector_2(void) __attribute__ ((signal, used));
-void __vector_2(void) {
-	PORTB ^= (1 << PB1);
-	for (uint32_t i = F_CPU * 0.04; --i;) {}
+	if (++i < mid) { // fade in
+		ICR1 = F_CPU / TIMER1_PRE - 1;
+		OCR1A = F_CPU / (TIMER1_PRE * (i * 0.1)) - 1;
+	} else { // fade out
+		OCR1A = F_CPU / TIMER1_PRE - 1;
+		ICR1 = F_CPU / (TIMER1_PRE * (i * 0.1)) - 1;
+
+		if (i == OCR0A) {i = 0;}
+	};
 }
