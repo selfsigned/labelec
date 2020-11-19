@@ -21,7 +21,7 @@ void uart_init()
 	UCSR0C |= (1 << UCSZ01) | (1 << UCSZ00);
 
 	// U2X (double the speed)
-	UCSR0A = (1 << U2X0);
+	UCSR0A |= (1 << U2X0);
 
 	// enable tx
 	UCSR0B |= (1 << TXEN0);
@@ -53,8 +53,7 @@ int main()
 	}
 }
 
-void TIMER1_OVF_vect(void) __attribute__ ((signal, used));
-void TIMER1_OVF_vect() {
+void __attribute__ ((signal, used)) TIMER1_OVF_vect() {
 	// yeet
 	static uint8_t flag = 1;
 

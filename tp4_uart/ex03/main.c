@@ -16,6 +16,9 @@ void uart_init(uint16_t ubrr)
 
 	// enable tx and rx
 	UCSR0B |= (1 << TXEN0) | (1 << RXEN0);
+
+	// enable rx interrupt
+	UCSR0B |= (1 << RXCIE0);
 }
 
 void uart_tx(char c)
@@ -26,18 +29,21 @@ void uart_tx(char c)
 	UDR0 = c;
 }
 
-char uart_rx()
-{
-	while (!(UCSR0A & (1<<RXC0)));
-
-	return UDR0;
-}
-
 int main()
 {
 	uart_init(UBRR_VALUE);
 
-	for (;;) {
-		uart_tx(uart_rx());
+	__asm__("SEI");
+	for (;;) {}
+}
+
+void __attribute__ ((signal, used)) USART_RX_vect() {
+	char c = UDR0;
+
+	if (c >= 'a' && c <= 'z') {
+		c -= 32;
+	} else if (c >= 'A' && c <= 'Z') {
+		c += 32;
 	}
+	uart_tx(c);
 }
